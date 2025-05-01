@@ -1,13 +1,13 @@
-use std::thread;
-use std::cell::RefCell;
-use std::sync::{Arc, Mutex, Condvar};
-use std::sync::atomic::{AtomicBool, Ordering};
-use rand;
-use num_cpus;
-use once_cell::sync::Lazy;
-use deque::{Worker, Stealer, Stolen};
 use crate::job::Job;
 use crate::latch::Latch;
+use deque::{Stealer, Stolen, Worker};
+use num_cpus;
+use once_cell::sync::Lazy;
+use rand;
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread;
 
 struct RegistryState {
     threads_at_work: usize,
@@ -40,8 +40,8 @@ pub struct Registry {
     terminated: AtomicBool,
 }
 
-unsafe impl Send for Registry { }
-unsafe impl Sync for Registry { }
+unsafe impl Send for Registry {}
+unsafe impl Sync for Registry {}
 
 impl Registry {
     pub fn new() -> Arc<Registry> {
@@ -132,9 +132,8 @@ pub struct WorkerThread {
 
 impl WorkerThread {
     pub fn current() -> Option<Arc<WorkerThread>> {
-        WORKER_THREAD_STATE.with(|worker_thread_state| {
-            worker_thread_state.borrow().as_ref().cloned()
-        })
+        WORKER_THREAD_STATE
+            .with(|worker_thread_state| worker_thread_state.borrow().as_ref().cloned())
     }
 
     pub fn set_current(current: Arc<WorkerThread>) {
@@ -188,7 +187,7 @@ fn main_loop(registry: Arc<Registry>, index: usize) {
 
 fn steal_work(registry: Arc<Registry>, index: usize) -> Option<Job> {
     let num_threads = registry.num_threads();
-    let start = rand::random::<usize>() % num_threads;
+    let start = rand::random::<u64>() as usize % num_threads;
     (start..num_threads)
         .chain(0..start)
         .filter(|&i| i != index)

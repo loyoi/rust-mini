@@ -1,14 +1,14 @@
+use mini_rayon::join::join;
+use num_cpus;
+use rand::Rng;
 use std::mem;
 use std::thread;
 use std::time::Instant;
-use num_cpus;
-use rand::Rng;
-use mini_rayon::join::join;
 use threadpool::ThreadPool;
 
 fn partition<T>(v: &mut [T]) -> usize
 where
-    T: PartialOrd + Send + 'static
+    T: PartialOrd + Send + 'static,
 {
     let pivot = v.len() - 1;
     let mut i = 0;
@@ -24,7 +24,7 @@ where
 
 fn quick_sort<T>(v: &mut [T])
 where
-    T: PartialOrd + Send + 'static
+    T: PartialOrd + Send + 'static,
 {
     if v.len() <= 1 {
         return;
@@ -37,7 +37,7 @@ where
 
 fn quick_sort_parallel_by_spawn<T>(v: &'static mut [T])
 where
-    T: PartialOrd + Send + 'static
+    T: PartialOrd + Send + 'static,
 {
     if v.len() <= 200 {
         quick_sort(v);
@@ -53,7 +53,7 @@ where
 
 fn quick_sort_parallel_by_threadpool<T>(pool: &ThreadPool, v: &'static mut [T])
 where
-    T: PartialOrd + Send + 'static
+    T: PartialOrd + Send + 'static,
 {
     if v.len() <= 200 {
         quick_sort(v);
@@ -68,7 +68,7 @@ where
 
 fn quick_sort_parallel_by_mini_rayon<T>(v: &'static mut [T])
 where
-    T: PartialOrd + Send + 'static
+    T: PartialOrd + Send + 'static,
 {
     if v.len() <= 200 {
         quick_sort(v);
@@ -76,7 +76,10 @@ where
     }
     let mid = partition(v);
     let (lo, hi) = v.split_at_mut(mid);
-    join(|| quick_sort_parallel_by_mini_rayon(lo), || quick_sort_parallel_by_mini_rayon(hi));
+    join(
+        || quick_sort_parallel_by_mini_rayon(lo),
+        || quick_sort_parallel_by_mini_rayon(hi),
+    );
 }
 
 fn sort_benchmark(data: &Vec<u32>) -> u128 {
@@ -153,10 +156,8 @@ fn main() {
     let mut result_c = Vec::with_capacity(epoch);
     let mut result_d = Vec::with_capacity(epoch);
     for _ in 0..epoch {
-        let mut rng = rand::thread_rng();
-        let random_numbers = (0..num)
-            .map(|_| rng.gen_range(min..=max))
-            .collect();
+        let mut rng = rand::rng();
+        let random_numbers = (0..num).map(|_| rng.random_range(min..=max)).collect();
         result_a.push(sort_benchmark(&random_numbers));
         result_b.push(sort_parallel_by_spawn_benchmark(&random_numbers));
         result_c.push(sort_parallel_by_threadpool_benchmark(&random_numbers));
@@ -166,8 +167,20 @@ fn main() {
     let sum_b: u128 = result_b.iter().sum();
     let sum_c: u128 = result_c.iter().sum();
     let sum_d: u128 = result_d.iter().sum();
-    println!("sort benchmark average duration: {} ms", sum_a / epoch as u128 / 1000);
-    println!("sort parallel by spawn benchmark average duration: {} ms", sum_b / epoch as u128 / 1000);
-    println!("sort parallel by threadpool benchmark average duration: {} ms", sum_c / epoch as u128 / 1000);
-    println!("sort parallel by mini-rayon benchmark average duration: {} ms", sum_d / epoch as u128 / 1000);
+    println!(
+        "sort benchmark average duration: {} ms",
+        sum_a / epoch as u128 / 1000
+    );
+    println!(
+        "sort parallel by spawn benchmark average duration: {} ms",
+        sum_b / epoch as u128 / 1000
+    );
+    println!(
+        "sort parallel by threadpool benchmark average duration: {} ms",
+        sum_c / epoch as u128 / 1000
+    );
+    println!(
+        "sort parallel by mini-rayon benchmark average duration: {} ms",
+        sum_d / epoch as u128 / 1000
+    );
 }
